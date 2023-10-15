@@ -1,8 +1,8 @@
 {
-  "name": "bc2023-4",
+  "name": "lab4",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
