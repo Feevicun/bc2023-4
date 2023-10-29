@@ -1,42 +1,45 @@
-const express = require("express");
-const PORT = 8000;
-const app = express();
+const http = require("http");
 const fs = require("fs");
-const xml2js = require("xml2js");
+const xmlParser = require("fast-xml-parser");
+const xmlBuilder = require("fast-xml-parser");
 
-const parser = new xml2js.Parser();
+const requestListener = function (req, res) {
+  res.writeHead(200);
 
-function minFunc(arr) {
-    let minVal = arr[0].value;
-    for (let i = 1; i < arr.length; i++) {
-        if (arr[i].value < minVal)
-            minVal = arr[i].value;
+  const data = fs.readFileSync("data.xml", "utf-8");
+  const options = {
+    ignoreAttributes: false,
+    attributeNamePrefix: "",
+  };
+
+  const jsonData = xmlParser.parse(data, options);
+  const minValue = findMinValue(jsonData);
+
+  const xmlData = {
+    data: {
+      min_value: minValue,
+    },
+  };
+
+  const builder = new xmlBuilder.j2xParser({ format: true });
+  const xmlres = builder.parse(xmlData);
+
+  fs.writeFileSync("res.xml", xmlres);
+  res.end(xmlres);
+};
+
+function findMinValue(data) {
+  let min = 10000;
+  for (const res of data.indicators.res) {
+    const value = parseFloat(res.value);
+    if (!isNaN(value) && value < min) {
+      min = value;
     }
-    return minVal;
+  }
+  return min;
 }
 
-app.get("/", (req, res) => {
-    fs.readFile("data.xml", (err, data) => {
-        if (err !== null)
-            res.status(400).send('Invalid XML format');
-        parser.parseString(data, (err, result) => {
-            if (err) {
-                res.status(400).send('Invalid XML format');
-            } else {
-                const minVal = minFunc(result.indicators.res);
-                const xmlData = {
-                    data: {
-                        min_value: minVal
-                    }
-                };
-                const builder = new xml2js.Builder();
-                const finalXml = builder.buildObject(xmlData);
-                res.send(finalXml);
-            }
-        });
-    });
-});
-
-app.listen(PORT, () => {
-    console.log(`Сервер запущено на порті ${PORT}`);
+const server = http.createServer(requestListener);
+server.listen(8000, () => {
+  console.log("Server is running on port 8000");
 });
